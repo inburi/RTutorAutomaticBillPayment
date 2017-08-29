@@ -1,3 +1,13 @@
+
+```s
+library(devtools)
+install_github("inburi/RTutorAutomaticBillPayment")
+```
+fails!<br>
+
+
+
+
 This package constitutes an interactive R problem set based on the RTutor package (https://github.com/skranz/RTutor). 
 
 --- Add **brief** description of content and link to original paper ---
