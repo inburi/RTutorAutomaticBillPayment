@@ -1,0 +1,1657 @@
+The Effect of Automatic Bill Payment on Electricity Consumption
+Author: Ingmar Buri
+Date: 30.08.2017
+#< ignore
+```{r "_"}
+#library(restorepoint)
+# facilitates error detection
+#set.restore.point.options(display.restore.point=!TRUE)
+
+library(RTutor)
+library(yaml)
+#library(restorepoint)
+setwd("C:/Users/IngmarBuri/Desktop/aaM2")
+ps.name = "SalienceEffects"; sol.file = paste0(ps.name,"_sol.Rmd")
+libs = c("dplyr", "ggplot2", "stargazer","lfe") 
+#name.rmd.chunks(sol.file) # set auto chunk names in this file
+create.ps(sol.file=sol.file, ps.name=ps.name,user.name=NULL,libs=libs,stop.when.finished=FALSE,addons="quiz",var.txt.file = "var.txt")
+#traceback()
+show.shiny.ps(ps.name, load.sav=FALSE,  sample.solution=FALSE, is.solved=FALSE, catch.errors=TRUE, launch.browser=TRUE)
+stop.without.error()
+```
+#>
+
+## Exercise 1 Overview
+
+### Welcome!
+
+This is an interactive RTutor problem set that I have written in the course of my Bachelor thesis
+at Ulm University. This problem set will help you to reproduce and understand results from the
+research paper "Automatic Bill Payment and Salience Effects: Evidence from Electricity Consumption"
+by Steven Sexton(from here on referred to as 'the author') which can be viewed and downloaded [here](http://www.mitpressjournals.org/doi/pdf/10.1162/REST_a_00465).
+The dataset is available [here](https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/28824).<br>
+The study seeks to empirically assess whether Automatic Bill Payment(abp) affects electricity consumption.
+The datasets used by the author in this study contain monthly observations of residential and
+commercial customers of a publicly owned electric utility in South Carolina named Santee Cooper.
+<br>
+You will begin with getting to know the structure of the data by calculating summary statistics
+and making visualizations of the data set of all residential customers. Then we try to find out
+if there is a causal relationship between enrollment in abp and electricity consumption by 
+running several regressions on the different datasets.
+<br>
+In the following exercises there will be tasks you'll have to solve in order to progress.
+You solve them by adding the required code in the task window and clicking the *check* button
+to test your solution.
+Solving some of the tasks will earn you rewards. You can look at your rewards if you type `awards()`
+in the code window and then click the *run chunk* button which will execute any R code without testing
+it. The other available buttons are self-explanatory.
+
+
+### __Structure__
+
+**Exercise 1: Overview**
+
+**Exercise 2: Getting to know the data - Part 1**
+
+**Exercise 3: Getting to know the data - Part 2 - Graphical Approach**
+
+**Exercise 4: Statistical Inference**
+
+**Exercise 5: All Residential Accounts**
+
+**Exercise 6: Recent Residential Accounts**
+
+**Exercise 7: Residential Energy Smart Accounts**
+
+**Exercise 8: Residential Standard Accounts**
+
+**Exercise 9: Residential Summer Conserving Accounts**
+
+**Exercise 10: Pseudo Treatments**
+
+**Exercise 11: Conclusion**
+
+**Exercise 12: Reference**
+
+**Exercise 13: Appendix**
+
+
+
+
+
+## Exercise 2 -- Getting to know the data - Part 1
+
+First we need to gain access to our dataset of all residential customers which is stored in the file *full_rsdn.rds*. We do this with the following syntax: `variable-name = readRDS("filename.rds")`.
+The data is therefore read in and assigned to a variable of our choice.
+
+```{r "2_0"}
+#< task
+# Read in the data stored in the file full_rsdn.rds and call
+# the variable you assign it to "res"
+
+#>
+res = readRDS("full_rsdn.rds")
+#< hint
+display("Have you forgotten to add quotation marks around the file name?")
+#>
+```
+#< award "Importing data!"
+Great! You read in the data! Now we can work with it!
+#>
+
+In the next task have a look at the first rows of the data.
+The solution is already given here so just click check.
+```{r "2_0_1"}
+#< task
+# With the head function you can easily look at any number of the
+# first rows of a data-frame. Pass the data-frame as first 
+# argument and the number of rows as second argument.
+head(res, 15)
+#>
+```
+You can also look at the data by clicking the button *data* at the top of a task window.
+<br>
+<br>
+Now that we have access to our data, let's first get to know the structure of it before we continue to analyse it and draw inferences from it.
+To do this we are going to have a look at the variables, do some summary statistics and
+finally visualize a few properties of the data.
+
+ 
+### Variables
+  * $ln\_cons\_per\_day$: This variable contains the natural logarithm of the average daily consumption of
+electricity in kWh in a given year_month of a given household.
+  * $id\_rate\_code$: A variable that uniquely identifies an account/household.
+  * $year\_month$: The number of months that have passed since 01 January 1960 in order to have a 
+continuous measure of time in monthly intervals. For February 1960 for example this variable
+holds the value of 1, for March 1960 the value of 2 and for June 1961 the value of 17.
+  * $month$: This variable contains the time of the month encoded with the numbers 1-12. 
+January is denoted with 1 ,February with 2  and so on.
+  * $year$: This variable contains the year of the observation.
+  * $abp$: This variable equals 1 if the household is enrolled in automatic bill payment in the current year_month.
+  * $bb$: This variable equals 1 if the household is enrolled in budget billing in the current year_month.
+  
+  Automatic Bill Payment means that customers agreed to have their payment drafted each month from their
+  bank account while they were enrolled in abp.
+  <br>
+  Budget Billing means that customers' payments were smoothed over a period of 12 months so that in months
+  where they consumed more than the mean of their last 12 months their bill was lowered and in months where
+  they consumed less than the mean of their last 12 months their bill was raised. This way bills vary minimally
+  from month to month. The author assumes that most accounts that enroll in budget billing are low income accounts
+  as budget billing helps to deal financially with consumption spikes and the resulting high electricity bill.
+  
+  
+As you progress you will get to know more variables when we need them. 
+
+<br>
+<br>
+Now that you have got a small overview over the variables, let's do some descriptive statistics.
+We might for example ask ourselves what the average daily consumption of electricity is. 
+In the dataset every row contains among others the daily electricity consumption of a certain household
+in a certain $year\_month$. We want to find out the average of all of these.
+Therefore we simply choose the column $ln\_cons\_per\_day$ from our data by writing:
+`data-frame$column-name` and pass it as an argument to the `mean()`-function. 
+
+
+```{r "2_1"}
+#< task
+#Calculate the mean of the column ln_cons_per_day 
+
+#>
+mean(res$ln_cons_per_day)
+#< hint
+display("Just write mean() and in between the parentheses write the syntax necessary to choose the column ln_cons_per_day
+from our data-frame res. Look in the paragraph directly above for information on that.")
+#>
+
+```
+#< award "Using mean!"
+#>
+The result is `NA` because the column $ln\_cons\_per\_day$ has missing values. Missing values are denoted by
+`NA` in R and any calculation with `NA` values will result in `NA`.
+We therefore want to exclude missing values from our calculation and we
+do that by setting the argument `na.rm` of the function `mean()` to `TRUE`. <br>
+Just click check.
+
+```{r "2_2"}
+#< task
+# By setting the argument na.rm of the mean function to TRUE the average of all available values is calculated.
+mean(res$ln_cons_per_day,na.rm=TRUE)
+#>
+```
+#< info "testing for NAs"
+If you want to know whether a vector x (a column of a data-frame for example)
+contains one or more NAs before you work on it,
+you can use the following command in R:
+`any(is.na(x))`
+The expression will return `TRUE` if x contains at least one NA and `FALSE` otherwise.
+#>
+As already mentioned the variable $ln\_cons\_per\_day$ contains the natural logarithm of all consumption values. Interpreting these values is not intuitive. Let's therefore find out the mean of the original
+consumption values. We can get the original values from the logarithmized values by applying the natural
+exponential function $f(x)=e^x$ , which is the inverse function of the natural logarithm, to all
+logarithmized values and then take the mean. The function $f(x)=e^x$ is implemented in `exp()` in R.
+In the following task remove the `#` and replace the `???` with the right expression.
+
+```{r "2_3"}
+#< task
+# Average of the original values:
+# mean(???(res$ln_cons_per_day),na.rm=TRUE)
+#>
+mean(exp(res$ln_cons_per_day),na.rm=TRUE)
+#< hint
+display("Replace the ??? with R's exponential function and don't forget to delete the '#' sign.")
+#>
+```
+So the average household consumed about 34.68 kWh of electricity per day.
+<br>
+
+It would also be good to know during which time-span the observations were obtained.
+The `range()` function is fitting for this task. It returns the minimum and the maximum of 
+a numeric vector. Use it on the column $year$.
+```{r "2_3_1"}
+#< task
+# What is the minimum and the maximum year in `res`
+
+#>
+range(res$year)
+#< hint
+display("Select the column year from res and pass it as an argument to the range() function.")
+#>
+```
+
+Let's continue by finding out the number of rows and therefore how many
+observations we have, the number of households these observations are from and how many of these
+households were ever enrolled in automatic bill payment.
+
+Pass our data-frame `res` as an argument to the function `nrow()` to find out the row count.
+```{r "2_4"}
+#< task
+# row count of "res":
+
+#>
+nrow(res)
+```
+
+To get the number of different households in our dataset, we are going to take the column
+$id\_rate\_code$ and see how many different values are contained within.
+The function `unique()` returns a vector that contains the same elements as the vector that has been passed to it, but without duplicate values.
+The function `length()` returns the number of elements a vector contains.
+```{r "2_5"}
+#< task
+# number of different households in the dataset:
+
+#>
+length(unique(res$id_rate_code))
+#< hint
+display("You must correctly call the functions length() and unique() in a nested way.")
+#>
+```
+
+One way to determine the number of households that ever enrolled in automatic bill payment
+is with the help of the variable $acct\_seq\_X\_abp\_ever$. It is 0 if the household
+never enrolls in automatic bill payment and has the value of the variable $acct\_seq$ else. 
+If we count the different households that have a value other than 0 for the variable 
+$acct\_seq\_X\_abp\_ever$ we receive the number of households that ever enrolled in automatic bill payment.
+
+So for this task we are going to take the column $id\_rate\_code$ again but this time we are only going to
+choose those values in $id\_rate\_code$ where the variable $acct\_seq\_X\_abp\_ever$ is not equal to 0 in the 
+same row. Read the following info box to learn about subsetting vectors as you are going to need
+it in the next task.
+
+
+#< info "Subsetting Vectors in R"
+We construct an example vector `vec = c(1,1,2,3,4,5,4)`.
+* choose every element bigger than 4: `vec[vec>4]` returns `5`
+* choose every element smaller than 4: `vec[vec<4]` returns `1 1 2 3`
+* choose every element bigger than or equal to 4: `vec[vec>=4]` returns  `4 5 4`
+* choose every element equal to 1: `vec[vec==1]` returns `1 1`
+* choose every element not equal to 1: `vec[vec!=1]` returns `2 3 4 5 4`
+
+<br>
+The only requirement the expression inside of the squared brackets has to meet is that it has to 
+evaluate to a logical vector (contains only `TRUE`(`T`) or `FALSE`(`F`)) of the same length
+as the vector you want to subset. 
+We could therefore also subset `vec` based on a logical expression
+that doesn't involve `vec` itself:
+If we have another vector `vec2 = c(7,8,8,8,8,8,7)` then `vec[vec2<8]` would evaluate to
+<br>
+`vec[c(T,F,F,F,F,F,T)]` and return `1 4` , the first and
+the last number of `vec`.
+#>
+
+
+```{r "2_6"}
+#< task
+# From the column id_rate_code choose all values where the corresponding value of the column
+# acct_seq_X_abp_ever is not equal to 0 and assign it to the variable "isABP"
+
+#>
+isABP=res$id_rate_code[res$acct_seq_X_abp_ever != 0]
+#< hint
+display("Choose the column 'id_rate_code' from 'res' and subset it with the help of a logical expression
+        involving the column 'acct_seq_X_abp_ever' also from 'res'")
+#>
+```
+
+If you have completed this task `isABP` now contains all and only the households that were ever
+enrolled in automatic bill payment. There are still duplicate values in `isABP` however.
+In the next task find out how many distinct values there are in `isABP`. You already know how
+to do that.
+
+```{r "2_7"}
+#< task
+#  number of households that ever enroll in automatic bill payment:
+
+#>
+length(unique(isABP))
+```
+
+Let's continue by calculating the date of account initiation for all households. 
+
+The functions `group_by` and `summarise` from the package dplyr are useful for this task.
+
+We determine the date of account initiation for a given account by finding
+the $year\_month$ of that account's earliest observation.
+
+Look at the code carefully and click check.
+```{r "2_7_1"}
+#< task
+# year_month of account initiation of every household:
+library(dplyr)
+mYM=res %>% group_by(id_rate_code) %>% summarise(minYM = min(year_month))
+head(mYM)
+#>
+```
+#< info "group_by and summarise from dplyr"
+You could have received the same result from the previous task with this code: `summarise(group_by(res,id_rate_code),minYM=min(year_month))`, but as you can see, the use of
+the so called *pipe operator* `%>%` which is also part of the dplyr package can make the code easier to read.
+It passes the left-hand side of the pipe operator as the first argument of the function on the right-hand side of it.
+The `group_by()` function takes as its first argument a data-frame and for its second argument you should pass a categorical variable from that data-frame. This will 
+return a grouped data-frame which you pass as first argument
+to `summarise()` whose second argument is the function to be used on the values in every category. The *values of 
+which variable* in the data-frame is specified by passing the variable to the function in the second argument.
+#>
+You can further summarise by taking the mean of all account initiation dates.
+Just click check.
+```{r "2_7_2"}
+#< task
+# mean year_month of account initiation:
+mYM %>% summarise(meanAccInit=mean(minYM))
+#>
+```
+Rounded this would correspond to June 2001 as mean account initiation date.
+
+
+## Exercise 3 -- Getting to know the data - Part 2 - Graphical Approach
+
+In this exercise we are going to explore the data additionally in a graphical way. <br>
+Initially we are only interested in the observations - and therefore rows - of our data set 
+where the account wasn't enrolled in budget billing(variable $bb$) at the time, to rule out the
+influence of enrollment in budget billing. As you know
+the variable $bb$ is 0 if the account wasn't enrolled in budget billing at the time of the observation
+and 1 otherwise. 
+
+First read in the data again.
+```{r "3_0_1"}
+#< task
+res = readRDS("full_rsdn.rds")
+#>
+```
+Then we filter our data. As already mentioned we want only observations of accounts that were not enrolled in
+budget billing at the time. Additionally we are only going to choose rows with non-missing values in the column
+$ln\_cons\_per\_day$. The `filter` function in the package dplyr is well suited for this task:
+
+#< info "dplyr - filter"
+The `filter` function takes as its first argument a data-frame. In the second
+argument you specify which conditions which variables in a row have to meet. `filter` 
+will then return a data-frame that contains only the rows where the conditions are all
+met.<br>
+As with other dplyr functions you can also pass the first argument with the pipe operator `%>%` instead
+of specifying it *in* the function. <br>
+The logical conditions in the second argument can be combined to one logical statement with
+logical *AND* s ( -> `&`) or logical *OR* s <br>( -> `|`). 
+Consider the operator precedence:
+
+<style>
+#preced {
+    font-family: arial, sans-serif;
+    border-collapse: collapse;
+    width: 27%;
+}
+
+table#preced td{
+  border: 1px solid #dddddd;
+    text-align: left;
+    padding: 8px;
+}
+
+.prec{
+font-weight: bold;
+}
+</style>
+
+<table id="preced">
+  <tr>
+    <td class="prec">high precedence</td>
+    
+  </tr>
+  <tr>
+    <td><code> < &nbsp > &nbsp <= &nbsp >= &nbsp == &nbsp !=</code></td>
+    
+  </tr>
+  <tr>
+    <td><code>!</code></td>
+    
+  </tr>
+  <tr>
+    <td><code>&</code></td>
+    
+  </tr>
+  </tr>
+  <tr>
+    <td><code>|</code></td>
+    
+  </tr>
+  <tr>
+    <td><code>,</code> (only in dplyr's filter function)</td>
+   
+  </tr>
+  <tr>
+    <td class="prec">low precedence</td>
+    
+  </tr>
+</table>
+<br>
+In dplyr's `filter` function you can also put a comma between logical conditions. The comma acts like a logical *AND* but has the lowest precedence. 
+#>
+Click check.
+```{r "3_0_2"}
+#< task
+# We generate a data-frame which only contains the rows 
+# where ln_cons_per_day is non-missing and the account
+# wasn't enrolled in budget billing and then assign it
+# to cmp.
+cmp = res %>% filter(!is.na(ln_cons_per_day),bb==0)
+
+# We also turn the variable abp into a factor
+# variable. Otherwise it would be interpreted as
+# continuous numeric variable when we plot it.
+cmp$abp = factor(cmp$abp)
+
+# Finally we add a new column that contains the
+# delogarithmized values of the column ln_cons_per_day
+# and call it cons_per_day. Plotting the original values
+# will show the differences between observation groups
+# in a more pronounced way and facilitate interpretation.
+cmp$cons_per_day = exp(cmp$ln_cons_per_day)
+#>
+```
+Now we plot our data. We want to visualise how consumption values from observations where the account was
+enrolled in abp(abp=1) differ from consumption values of observations where abp was 0.
+To do this, we draw a boxplot for each observation group in one plot.
+We use the package ggplot2 for our visualisations.
+
+#< info "introduction to ggplot2"
+`ggplot()` is the function we are always going to need for our graphs here. It sets up a plot.
+Its arguments are `data` and `mapping` in that order. For the argument `data` you specify a
+data-frame and for the argument `mapping` you pass the function `aes(x,y,...)` (aesthetics). In the first
+argument of `aes()` you specify the column in your data-frame to be used as x-values and in the 
+second argument you specify the column to be used as y-values. Further arguments to `aes()` are optional and have to be named.
+These include among others *color* and *size*.<br><br>
+
+-------
+
+Actually plotting something requires adding at least one *layer*. A layer adds a specific visual representation of the data to the plot, called **geom**.
+If you haven't specified the arguments `data` and `mapping` in 
+`ggplot()` you have to specify them in the added layers(but in reverse order).
+<br>
+  If data and aesthetics have been passed to `ggplot()` *and* a layer, the data and aesthetics passed to the layer will overwrite those passed to `ggplot()` for this layer.
+<br>
+  A layer is added by the syntax: *"plot-object + geom_type"*.
+<br>
+  There are many different geoms. For example:
+  <br>
+* `geom_point()`
+* `geom_bar()`
+* `geom_boxplot()`
+* `geom_histogram()`
+* `geom_line()`
+#>
+<br>
+
+Click check:
+```{r "3_1"}
+#< task
+# comparison of boxplots:
+p = ggplot(cmp,aes(abp,cons_per_day))
+p+geom_boxplot()
+#>
+```
+
+#< info "Default definition of boxplots in ggplot2"
+The default definition of boxplots in ggplot2 is the following:
+The upper hinge is the 75% percentile.
+The lower hinge is the 25% percentile.
+The upper whisker will reach up to the highest value in the data that is still less than or equal to 
+the 75% percentile plus the IQR*1.5. All values in the data greater than the 75% percentile + IQR*1.5
+will be displayed as single points.
+The lower whisker will reach up to the lowest value in the data that is still greater than or equal to 
+the 25% percentile minus the IQR*1.5. All values in the data lower than the 25% percentile - IQR*1.5
+will be displayed as single points.
+#>
+<br>
+<br>
+
+Assuming that the enrollment in automatic bill payment increases electricity consumption, we would
+expect the boxplot on the right to show an overall higher consumption level than the boxplot on the left,
+but it does not.
+One could therefore think that the boxplots we've just drawn prove us wrong in our assumption and that the opposite is the case. We shouldn't jump to a conclusion, however.
+Comparing observations like we have, can give a distorted result when the accounts don't have as many observations
+where abp=1 as observations where abp=0. This is the case in our data. In fact, there are many accounts that
+have only observations for one value of abp.
+
+Simply removing these households that have only one observation type(either only abp=0 or only abp=1) brings about a clearly visible change in the boxplots.
+
+To exclude these households we are first going to identify all households that have both types of observations, therefore observations where abp=1 but also some observations where abp=0.
+
+We are going to identify them by finding out the group of accounts which have any observations where abp=1 and the group of accounts which have any observations where abp=0. The accounts that are contained in both groups are
+the ones that have both types of observations. 
+In the next task use the `intersect` function and pass two arguments: the vector of accounts that have any
+abp=1 observation  and the vector of account that have any abp=0 observation. Even when there are
+duplicates in both vectors, the `intersect` function will return a vector of distinct elements that are
+contained in *both* of the vectors that you passed to it.
+```{r "3_1_1"}
+#< task
+# find the accounts(column id_rate_code) that have observations where abp=0
+# and observations where abp=1 and assign them to the variable both
+# both = ???(cmp$id_rate_code[cmp$abp==1],???)
+
+#>
+both = intersect(cmp$id_rate_code[cmp$abp==1],cmp$id_rate_code[cmp$abp==0])
+```
+We are going to filter for the observations of the accounts with both observation types(=accounts in `both`) and
+assign them to `cmp2`.
+Click check.
+```{r "3_1_2"}
+#< task
+cmp2 = cmp %>% filter(id_rate_code %in% both)
+#>
+
+```
+Now we could plot two boxplots next to each other exactly like before but with our new data in `cmp2`.
+To get a clearer picture of how the boxplots of the new data are different from the boxplots of the data in `cmp`
+we are going to put the 2 boxplots of the data in `cmp2` in the same graph as the 2 boxplots of the data in `cmp`.
+To be able to identify which boxplots stem from which dataset, we are adding a new column `accType` to `cmp` and `cmp2` that identifies from which dataset observations come from. Then we combine `cmp` and `cmp2` into a unified dataset `cmp3` by stacking the two datasets on top of another with the function `rbind` (=bind row-wise).
+Click check.
+```{r "3_1_3"}
+#< task
+# adding columns that identify observations' origin
+cmp$accType="allAcc"
+cmp2$accType="accInBoth"
+
+# Combining cmp and cmp2 into cmp3 by stacking them on top
+# of another(row-wise binding). This requires cmp2 and cmp3
+# to have the same number of columns and equal columns names.
+cmp3=rbind(cmp,cmp2)
+cmp3$abp = factor(cmp3$abp)
+#>
+```
+
+```{r "3_2",fig.height=9, fig.width=10}
+#< task
+p1=ggplot(cmp3,aes(accType,cons_per_day,fill=abp))+geom_boxplot()
+p1
+#>
+```
+First, notice how the argument `fill` of `aes()` allows us to add another classification level based on the variable `abp` within the different values of the variable `accType`.
+
+Second, the graph *suggests* that among the accounts that are <b><i>not</i></b> in `both`, those accounts that
+originated only observations where abp=0 had a higher electricity consumption level overall than the accounts that originated only observations where abp=1.
+<br>
+<br>
+That this is true can be seen in the rightmost panel(**"accNotInBoth"**) in the following graph:
+<br>
+These accounts that originated only one observation type distort the boxplots in group "(all)" and falsely suggest automatic bill payment reduces electricity consumption. <br>
+![](Rplot.jpeg)
+
+#< info "code for the three panel plot - using facet_wrap()"
+
+    cmp = res %>% filter(!is.na(ln_cons_per_day),bb==0)
+    cmp$abp = factor(cmp$abp)
+    both = intersect(cmp$id_rate_code[cmp$obsType=="onlyABP"],cmp$id_rate_code[cmp$obsType=="neither"])
+    
+  We already used the first three lines of code. Previously we continued by making a data-frame `cmp2`
+  of all accounts with observations of both types. We then proceeded 
+  to add the column `accType` to `cmp` and `cmp2`. The value of `accType` was **"accInBoth"** in 
+  `cmp2` and **"allAcc"** in `cmp`. 
+    
+    
+  Here we don't need any other data-frame than `cmp`. We categorize the accounts
+  into **"accInBoth"** and **"accNotInBoth"**:  
+  
+    cmp$accType = ifelse(cmp$id_rate_code %in% both,"accInBoth","accNotInBoth")
+    
+    
+  As a further preparation step we convert the column `accType` from *character* type to *factor* and
+  specify the levels in the order they should later appear in the plot. as well as
+  specifying an additional level `(all)`. 
+  
+    cmp$accType = factor(cmp$accType,levels = c("accInBoth","(all)","accNotInBoth"))
+    
+
+We need an extra level `(all)` even though we don't have values for it like for the other two levels. The `(all)`
+level is for *all* observations in `cmp` regardless of `accType`. We choose to name our factor level for all observations exactly `(all)` because this is also the name that ggplot2 uses for all observations, so it gets recognized. To include an extra factor level for all observations is not default behavior. It will only be included if `margins=TRUE` is passed as an argument to the `facet_grid()` function.
+  
+The fill argument to `ggplot()` causes the boxplots to be colored differently dependent on the value in
+`obsType` and would add the coloring legend in a caption. This is in our case not necessary as the axis labels
+already provide information about which observation types get which color. `guides(fill=FALSE)` is therefore added to remove the caption.
+    
+     p1=ggplot(cmp,aes(obsType,exp(ln_cons_per_day),fill=obsType))+geom_boxplot()+
+     facet_grid(. ~ accType2,margins=TRUE)+guides(fill=FALSE) 
+     p1
+
+The first argument of `facet_grid()` is a formula. 
+  * You write `. ~ colname2` if you want to make
+    a panel for every different value in `colname2` and arrange those panels horizontally like in this plot.
+  * You write `colname1 ~ .` if you want to make
+    a panel for every different value in `colname1` and arrange those panels vertically.
+  * You write `colname1 ~ colname2` if you want to make
+    a panel for every different value combination in "colname1" and "colname2". The result will be a grid of
+    panels.
+#>
+<br>
+<br>
+
+In the following task you will get to see individual accounts' consumption over the course of time.
+This will be helpful in recognizing the need to account for seasonal and individual differences in
+electricity consumption in the statistical inference part later.
+To be able to better recognize the seasonal influence on consumption, vertical lines
+are added between years.
+
+Click check.
+```{r "3_3",fig.height=9, fig.width=10}
+#< task_notest
+# Choose the accounts whose consumption over time you would like to see.
+# Currently you will get to see the 6 accounts with the highest observation count
+# that still meet the conditions from the previous task.
+# Write for example in the first code line ...Filt$id_rate_code[c(1,3,6)] to get
+# a plot of the accounts in row 1,3 and 6 of indvl.
+
+Filt = readRDS("accs.rds")
+
+indvl=res %>% filter(id_rate_code %in% Filt$id_rate_code[1:6])
+
+indvl$cons_per_day=exp(indvl$ln_cons_per_day)
+indvl$ABP = as.factor(indvl$abp)
+
+ggplot(indvl,aes(year_month,cons_per_day,fill=ABP))+
+    geom_col()+
+    facet_grid(id_rate_code ~ .)+
+    geom_vline(xintercept = indvl$year_month[indvl$month==1]-0.5)
+#>
+```
+#< info "code for plot of individuals' consumption over time"
+
+    Filt=res %>% group_by(id_rate_code) %>%
+    filter(all(bb==0),all(diff(year_month)==1),!any(is.na(ln_cons_per_day)),mean(abp)<0.51,mean(abp)>0.49) %>%
+    summarise(howManyObs=n()) %>% arrange(desc(howManyObs))
+   
+For this plot as a first step all accounts were filtered that meet certain
+conditions that qualify them to be plotted.
+These conditions include:<br>
+account
+* never enrolls in budget billing -> `all(bb==0)`
+* has *one* continuous set of observations in time -> `all(diff(year_month)==1)`
+* has no missing consumption values -> `!any(is.na(ln_cons_per_day))`
+* has roughly equally many **"onlyABP"** as **"neither"** observations -> `mean(abp)<0.51,mean(abp)>0.49`
+<br>
+`all` returns `TRUE` if every value in a vector passed to `all` is `TRUE`. `diff` returns a vector that contains
+the difference between consecutive values in the vector that has been passed to it.
+<br>
+For every account that meets those conditions the observations were then counted: `summarise(howManyObs=n())`<br> The resulting data-frame was then arranged according to
+the observation count in descending order: `arrange(desc(howManyObs))`
+<br>
+Afterwards some accounts from that data-frame are chosen and their observations are assigned to `indvl`:
+
+    indvl=res %>% filter(id_rate_code %in% Filt$id_rate_code[1:6])
+    
+Here the first six accounts in `Filt` were chosen.
+Go back to the task window and change the code if you would maybe like to see the accounts 5 to 7 (`Filt$id_rate_code[5:7]`) or account 7,9 and 12 (`Filt$id_rate_code[7,9,12]`).
+
+Before plotting `indvl` two new variables are added to our data-frame. `cons_per_day` contains the
+delogarithmized and therefore original daily electricity consumption values in a `year_month` - `indvl$cons_per_day=exp(indvl$ln_cons_per_day)` - and `ABP` contains the variable `abp` encoded as
+categorical variable so R doesn't interpret the 0s and 1s as numeric - `indvl$ABP = as.factor(indvl$abp)`.<br>
+`indvl` is then plotted with the following code:<br>
+
+    ggplot(indvl,aes(year_month,cons_per_day,fill=ABP))+
+    geom_col()+
+    facet_grid(id_rate_code ~ .)+
+    geom_vline(xintercept = indvl$year_month[indvl$month==1]-0.5)
+    
+`geom_col` is used to represent the data as bar plots.<br>
+`geom_vline` serves to add vertical lines whose intercepts are specified in the argument `xintercept`.
+ We add a vertical line between every year by passing as argument to `xintercept` a vector of
+ all `year_month` where `month` is January(`month == 1`). To get the vertical lines to be drawn *between* the 
+ January and December bars and not in the middle of the January bars we subtract 0.5.
+#>
+
+
+It is easy to see that the accounts have a recurring pattern of electricity consumption that is roughly the same
+every year: In the later summer months the consumption is especially high which can probably be attributed to air conditioners. 
+<br>That consumption levels differ from account to account is apparent as well.
+<br>
+
+## Exercise 4 -- Statistical Inference
+
+From here on we try to answer the question whether there is a **causal** relationship between enrollment in abp
+and electricity consumption.
+
+We try to find out if there is, with linear regression analysis. 
+
+The regression formula for a simple linear regression of electricity consumption on abp enrollment is
+
+
+
+$$  ln\_cons\_per\_day_{it} = \beta_0 + \beta_1 abp_{it} + u_{it}  $$
+where i and t identify the ith individual at time t and $u_{it}$ (the error term) stands for all factors other than $abp_{it}$ that affect $ln\_cons\_per\_day_{it}$ (Wooldridge 2013, p. 25).
+
+We could try to estimate $\beta_1$ solely based on the values in $ln\_cons\_per\_day$ and $abp$.
+
+The following simulation serves to illustrate one reason for why this might result in an inaccurate
+estimate of $\beta_1$.
+ 
+For our simulation we create a dataset of 500 accounts(n=500) with 200(T=200) observations for each account.
+Let's assume our independent variable is like in the real data the logarithmized daily consumption of account i in month t (=$ln\_cons\_per\_day_{it}$)which could be fully explained by a linear function with the variables $bc_{i}$ which stands for the baseline consumption level of account i and $abp_{it}$.
+
+The true model would therefore be:
+
+$$ ln\_cons\_per\_day_{it} = \beta_0 + \beta_1abp_{it} + \beta_2bc_{i} + \epsilon_{it} $$
+ You know that we have real data for the variables $ln\_cons\_per\_day$ and $abp$. But the individual baseline
+ consumption level $bc_{i}$ can't be observed and therefore we have no data of it. We could just run the regression
+ with only the explanatory variable $abp$, although we know that if we
+ excluded $bc$, our model would be missing a relevant variable.
+ A relevant variable is a variable whose population coefficient - $\beta_2$ for $bc$ - is unequal to zero(Wooldridge 2013, p. 84).<br>
+ 
+ To derive the possible implications of estimating the population coefficient of $abp$ ,$\beta_1$, in a model where our only explanatory variable is $abp$ - let's call it the *short model* - we denote the estimates of
+ the population parameters from the *short model* as $\tilde \beta_0$,$\tilde \beta_1$, $\tilde \beta_2$
+ and the estimates obtained for the population parameters in the *true model* by $\hat \beta_0$,$\hat \beta_1$, $\hat \beta_2$.
+ 
+ Whether the estimate of $\beta_1$ when we exclude $bc$ from the model, $\tilde \beta_1$, will be distorted in expectation(which would be equivalent to: $E(\tilde\beta_1) \neq \beta_1$), depends: 
+ 
+ If $\beta_2$ is zero and we exclude $bc$ from our regression then $E(\tilde\beta_1) = \beta_1$ will always hold true. In this case we say $\tilde\beta_1$ is **unbiased**.
+ But we already said that in the true model $bc$ is needed to explain the values of $ln\_cons\_per\_day$. 
+ Therefore $\beta_2$ is not zero. Excluding $bc$ from the true model if $\beta_2$ is not zero will only still leave
+ the OLS estimator for $\beta_1$ in the short model($\tilde \beta_1$) unbiased if $Cor(abp,bc)$ is zero(Wooldridge 2013, p. 86).
+ 
+ In the simulation that we run we construct the data in a way that the variables $abp$ and $bc$ are
+ correlated to show the bias that arises in $\tilde \beta_1$ because of this correlation.
+ 
+ So first we construct our data.
+ For 500 accounts(n=500) with 200 observations in time(T=200) for each account we'll construct the
+ variable $abp_{it}$ that can vary over time within the observations of one account and the variable $bc_i$
+ which stays constant over the observations of one account. The variable $abp$ will be 1 if the account
+ is enrolled in automatic bill payment at the time of the observation and 0 if not.  For the variable
+ $bc$ $bc_i \in \{0,1\}$ will hold true. The value of 0 in variable $bc$ stands for a low baseline consumption level,   while 1 stands for a high baseline consumption level. If an account is a low baseline consumption level type
+ the likelihood of it being enrolled in abp in any month is 30%. If an account is a high baseline consumption level
+ type the likelihood of it being enrolled in abp in any month is 70%.
+ We further assume that the errors $\epsilon_{it}$ are *independently and identically distributed(i.i.d.)* and
+ that $\epsilon_{it} \sim \mathcal{N}(0,1)$ holds true.
+ Let's begin by constructing with the function `rnorm` a vector `eps` that holds the error for every observation:
+ `rnorm(n, mean=0, sd=1)` allows you to draw from a normal distribution. You specify the number of draws in the first
+ argument and the desired parameters of the normal distribution in the other arguments. For the parameters of 
+ the normal distribution we choose the default values in `rnorm` and therefore just have to specify the first argument.
+ 
+```{r "4_1"}
+#< task
+# Generate the error values and assign them to eps.
+# eps = ???
+#>
+eps = rnorm(100000)
+#< hint
+display("We have 500 accounts and every account has 200 observations. This means we have 100000 observations
+in total. This is how often we would like to draw from a normal distribution. Pass this value as an argument
+to the rnorm function. You don't have to specify any of the other arguments since we take the default values
+of these.")
+#>
+```
+#< award "drawing random numbers from a normal distribution"
+Great! You generated the error variable for our simulation. 
+#>
+Now let's generate a vector that holds the values of the variable $hh$(household) which identifies the different accounts or households. We will enumerate the 500 accounts with the integers from 1 to 500. As every account
+has 200 observations in time, each integer from 1 to 500 will appear 200 times in our vector.
+The function `rep` can generate such a vector. As first argument to `rep` we pass the vector that contains
+the integer sequence from 1 to 500 which is constructed like this in R: `1:500` . Then we pass a second named argument called `each` which we set to 200. This will cause every value in `1:500` to be repeated 200 times.
+
+```{r "4_2"}
+#< task
+# Generate the variable that identifies the accounts/households
+# hh = rep(???,each=???)
+#>
+hh = rep(1:500,each=200)
+```
+
+Now we go on to create the values for the baseline consumption level of every account $bc_i$.
+We need a baseline consumption value for each of our 500 accounts. Let's say any account is equally likely to 
+be a low baseline consumption type(bc=0) as he is being a high baseline consumption type(bc=1).
+To get a baseline consumption value for every one of the 500 accounts we therefore draw 500 times from a discrete uniform distribution with values 0 and 1.
+Look at the following code attentively 
+and click check.
+```{r "4_3"}
+#< task
+# Generate for every household a consumption level (0 or 1).
+# For this draw from the vector c(0,1) 500 times with replacement.
+bcAcc = sample(c(0,1),500, replace = TRUE)
+#>
+```
+To get the $bc$ variable, the baseline consumption value for every account has to be repeated as many times
+as there are observations for each account, therefore 200 times.
+You have already learned a way to do this with the `rep` function: `bc = rep(bcAcc,each=200)` would work
+but the same can be accomplished with the even shorter code, `bc = bcAcc[hh]`: In the square brackets you provide
+the index of the value in `bcAcc` which you would like to choose. If you remember the contents of `hh`: the numbers 1 to 500 each repeated 200 times, it comes apparent that this this short code will also correctly generate `bc`.
+Click check.
+```{r "4_4_0"}
+#< task
+# Generate the vector for the variable bc
+bc = bcAcc[hh]
+#>
+```
+Now we have generated all explanatory variables for our simulation but $abp$. Remember that for our simulation
+we want the likelihood of the value of $abp$ to be 1 or 0 to be dependent on what's the baseline consumption of
+the account that the observation is from.
+For the variable $abp$ we draw 100000(=n*T) times with replacement a value out of the vector `c(0,1)`. This
+time we don't draw from a uniform distribution but make the distribution that we draw from dependent on whether
+for the same observation the variable $bc$ is 0(low base consumption) or 1(high base consumption).  If $bc$ is
+0 we draw a 0 for $abp$ with 70% chance and a 1 with 30% chance . The probabilities are
+inverse for draws where $bc$ is 1. If we draw from vector `c(0,1)` but want 0 to be drawn with 70% and 1 with
+30% probability we use the `sample` function like before but additionally provide a vector that contains the probabilities
+for the elements of the vector that we draw from in order of the elements of the vector that we draw from. We pass this probability vector as
+named argument "prob": `sample(c(0,1),100000,prob=c(0.7,0.3),replace=TRUE)` This is for the case that $bc$ is 0.
+As already mentioned the probabilites are inverse if $bc$ is 1: `sample(c(0,1),100000,prob=c(0.3,0.7),replace=TRUE)`
+To alternate between drawing from the two different distributions dependent on the value of $bc$ we use
+the function `ifelse`: 
+
+     abp = ifelse(bc==0, sample(c(0,1),100000,prob=c(0.7,0.3),replace=TRUE),
+                         sample(c(0,1),100000,prob=c(0.3,0.7),replace=TRUE) )
+                         
+Don't make the mistake to think this code means that for every value of $bc$ we draw 100000 times!
+We just draw 100000 times in total.
+
+Click check.                      
+```{r "4_4_1"}
+#< task
+# Generate the vector for the variable abp
+abp = ifelse(bc==0, sample(c(0,1),100000,prob=c(0.7,0.3),replace=TRUE),
+                    sample(c(0,1),100000,prob=c(0.3,0.7),replace=TRUE) )
+#>
+```
+
+After having generated all explanatory variables let's choose values for the parameters of the model so that 
+we can generate the variable $ln\_cons\_per\_day$:
+Let $\beta_0=0, \beta_1=0.2$ and $\beta_2=0.5$
+
+```{r "4_5"}
+#< task
+# Generate our dependent variable ln_cons_per_day based on 
+# the model parameters, the explanatory variables and the error term.
+beta0 = 0; beta1 =0.2; beta2 = 0.5
+# ln_cons_per_day = beta0 + beta1 * ??? + beta2 * ??? + ???
+#>
+ln_cons_per_day = beta0 + beta1 * abp + beta2 * bc + eps
+```
+Finally we pack all of our variables in a data-frame.<br>
+Click check.
+```{r "4_6"}
+#< task
+# To make R recognize hh as the categorical variable it's meant to
+# be and not numeric we convert it with the as.factor function
+data = data.frame(ln_cons_per_day=ln_cons_per_day,hh=factor(hh),abp=abp,bc=bc)
+#>
+```
+And now we are ready to run a few regressions to illustrate omitted variable bias.
+
+In our first regression we are going to underspecify the model by excluding the variable $bc$.
+
+Our regression equation is therefore the short model:
+
+$$   ln\_cons\_per\_day_{it} = \beta_0 + \beta_1abp_{it} + u_{it}    $$
+where $u_{it} = \beta_2bc_{i}+\epsilon_{it}$
+
+In our simulation $abp$ is correlated with $bc$. This means that if we try to estimate $\beta_1$ in the
+short model where we exclude $bc$ , an explanatory variable -$abp$ in our case- will be
+correlated with the error term. 
+This is called an **endogeneity problem**. An endogeneity problem
+can be caused by a variety of things. In our case the endogeneity problem is caused by an **omitted variable**.
+Omitting a relevant variable can cause the estimators for the other explanatory variables in the model to 
+be biased! This means that under certain conditions the expected values of the parameters to be estimated -$beta_1$ in our case - are not the same as the true population parameter. (Wooldridge 2002, p.50/p.62)
+
+To omit a relevant variable from the true model in a linear regression equation does not necessarily have to cause
+omitted variable bias however. As already mentioned there are conditions for this to be the case.
+In our short regression model if the following statements are true we have omitted variable bias.
+
+ 1. $\beta_2 \neq 0$ 
+ 2. $Corr(abp,bc) \neq 0$ 
+
+We know that both conditions are true in our simulated data, so we have biased estimators in our short model.
+It is further possible to specify the direction of the bias of $\tilde \beta_1$ if we know the signs of $\beta_2$ 
+and $Corr(abp,bc)$. The following table contains the sign of the bias of $\tilde \beta_1$ for every sign combination of $\beta_2$  and $Corr(abp,bc)$.<br>
+
+<style>
+#Qw {
+ font-size: 79%;
+}
+</style>
+<table style="width:100%">
+  <tr>
+    <th></th>
+    <th>Corr(abp,bc) > 0</th>
+    <th>Corr(abp,bc) < 0</th>
+    <th>Corr(abp,bc) = 0</th>
+  </tr>
+  <tr>
+    <th>&beta;<sub>2</sub> > 0</th>
+    <td>positive bias</td>
+    <td>negative bias</td>
+    <td rowspan="2">no bias</td>
+  </tr>
+  <tr>
+    <th>&beta;<sub>2</sub> < 0</th>
+    <td>negative bias</td>
+    <td>positive bias</td>
+  </tr>
+  <tr>
+    <th></th>
+    <td></td>
+    <td></td>
+    <td id="Qw">(Wooldridge 2013, p. 86)</td>
+    
+  </tr>
+</table>
+
+Which direction do you expect the bias to be? Of the two possibilities<br>
+1. $E(\tilde \beta_1) > \beta_1$ (positive bias) <br>
+2. $E(\tilde \beta_1) < \beta_1$ (negative bias) <br>
+
+#< quiz "positive or negative bias"
+question: Do we have a positive or a negative bias ? 
+sc:
+    - positive*
+    - negative
+success: Great, your answer is correct!
+failure: That's not the correct answer! Try again.
+#>
+
+To solve the quiz you have to know the signs of $Corr(abp,bc)$ and $\beta_2$. If you need some help with 
+determining their signs, follow this reasoning: If you look at the code that we used to generate the variable $abp$
+for our simulation 
+
+
+     abp = ifelse(bc==0, sample(c(0,1),100000,prob=c(0.7,0.3),replace=TRUE),
+                         sample(c(0,1),100000,prob=c(0.3,0.7),replace=TRUE) )
+                         
+
+notice how it is likelier for $abp$ to have the same value as $bc$ (70% probability) than not (30% probability).
+This means a high(low) value in $bc$ tends to come with a high(low) value in $abp$. $abp$ and $bc$ are therefore
+**positively** correlated. <br>
+The sign of $\beta_2$ can be determined intuitively: A higher
+baseline consumption of an account means a higher value in $bc$ and therefore a higher value in $ln\_cons\_per\_day$
+if we hold all the other explanatory variables($abp$ in our case) constant. The partial effect of
+$bc$ on $ln\_cons\_per\_day$ has therefore to be positive. With these informations we can read from the table that
+the bias of $\tilde \beta_1$ is positive.<br>
+
+This means that if we run the regression for the short model we are likely going to overestimate the partial effect
+of $abp$ on $ln\_cons\_per\_day$.
+
+Let's run the regression for the short model.
+We use the `lm` function for this. To `lm` pass the regression formula in the following way: `dependent variable ~ independentVar1 + indepVar2 + ... indepVarN`. The `summary` function used on the list that `lm` returns will
+give us a nicely formatted overview over the calculated values from the regression.
+Click check.
+```{r "4_7"}
+#< task
+# 
+sm=summary(lm(ln_cons_per_day~abp))
+sm
+#>
+```
+As expected our estimate $\tilde \beta_1$ is clearly higher than $\beta_1=0.2$.
+
+The bias of $\tilde \beta_1$  can be formulated in the following way:
+$$ Bias(\tilde \beta_1)  =\mathbb{E}(\tilde \beta_1)- \beta1 = \beta_2 * \frac{Cov(abp,bc)}{Var(abp)} $$
+(Wooldridge 2013, p.86)
+
+
+Let's include $bc$ and see what we get for $\hat \beta_1$ which is, as already defined earlier, the OLS estimator for $\beta_1$ in the true model.
+```{r "4_8"}
+#< task
+tm=summary(lm(ln_cons_per_day~abp+bc))
+tm
+#>
+```
+$\hat \beta_1$ proves to be a better estimate of $\beta_1=0.2$ than $\tilde \beta_1$.
+<br>
+
+
+Now let's assume we didn't have observations for the variable $bc$ like in our real data because
+$bc$ can hardly be observed. We can still find an unbiased estimator for $\beta_1$ if we make use
+of the information, which observation came from which household. In our generated data the variable $hh$
+contains that information. In our real data this information is contained in the variable $id\_rate\_code$.
+We are going to deploy the fixed effects estimator.
+#< info "fixed effects estimation"
+Fixed effects estimation requires the data to be transformed in the following way (**within transformation**)
+$$ ln\_cons\_per\_day_{it} - \overline{ln\_cons\_per\_day_i} = \beta_1(abp_{it}-\overline{abp_i}) + \beta_2(h_i-\overline{h_i})+\epsilon_{it}-\overline{\epsilon_{i}} $$
+where $\overline{ln\_cons\_per\_day_i} = \frac{1}{T} \sum_{t=1}^T ln\_cons\_per\_day_{it}$.
+
+Transforming our data in this way removes the unobserved fixed effect $h_i$ as
+$h_i - \overline{h_i}$ is zero for every $i$:
+
+$$ ln\_cons\_per\_day_{it} - \overline{ln\_cons\_per\_day_i} = \beta_1(abp_{it}-\overline{abp_i}) +\epsilon_{it}-\overline{\epsilon_{i}} $$
+If we use the OLS estimator on this **time-demeaned** data, we get an unbiased estimator of $\beta_1$, the so called
+**fixed effects estimator**.
+
+As long as $abp_{it}$ (or any other explanatory variable) is uncorrelated with the error term $\epsilon_{it}$
+the OLS estimator will be an unbiased estimator of $\beta_1$.
+
+
+
+(Wooldridge 2013, p. 466,467)
+
+
+#>
+Now we estimate $\beta_1$ with the within estimator. We do this by including the household variable
+in our OLS regression and tell R to treat it as a categorical variable. To be precise, the following
+regression will *not* use the within estimator but instead include a dummy variable for all but one
+account. The estimate of $\beta_1$ ,obtained like this, will however be equivalent to the estimate we would have received if we would have used the within estimator(Wooldridge 2013, p. 470).<br>
+Click check.
+```{r "4_9",results='asis'}
+#< task
+fxe=summary(lm(ln_cons_per_day~abp+factor(hh)))
+
+# Let's compare the estimate for beta1 from the true model
+# with the estimate we received for beta1 with the fixed effects
+# estimator:
+coef(tm)[2]
+coef(fxe)[2]
+
+#>
+```
+The difference is small. The fixed effects estimator is useful if we want to account for
+unobserved individual differences between individuals(households) that affect the independent
+variable(ln_cons_per_day).
+
+In the following exercises we are going to use the function `felm` from the package lfe as it is
+much faster than `lm` for our use case.
+
+
+
+## Exercise 5 -- All Residential Accounts
+
+From here on we are going to run our regressions on the real data.
+
+We are going to include additional variables:
+
+
+* $abp\_X\_bb\_ever$: This variable equals 1 if the household is enrolled in automatic bill payment in the current
+year_month <b><i>and</i></b> has ever been enrolled in budget billing.
+* $bb\_X\_abp\_ever$: This variable equals 1 if the household is enrolled in budget billing in the current
+year_month <b><i>and</i></b> has ever been enrolled in automatic bill payment.
+* $acct\_seq$: A variable that contains how many months have passed since the household became a customer of the utility. If for example a household became a customer in year_month 470, acct_seq would
+be 0 for this year_month, 1 the next month and 2 the month after that and so on.
+* $acct\_seq2$: This variable is $acct\_seq^2$.
+* $acct\_seq3$: This variable is $acct\_seq^3$.
+* $acct\_seq\_X\_abp\_ever$: A variable that is the same as the variable acct_seq for households that have ever been
+enrolled in automatic bill payment and zero for all other households.
+* $month$: This variable contains the time of the month encoded with the numbers 1-12. 
+* $zip5$: This varibale contains a five digit zip code that identifies the area the account is situated in.
+
+`felm` is similar to `lm` in that as a first argument you pass the regression formula but in `felm` categorical
+explanatory variables, like $id\_rate\_code$ or $month$ in our case, are separated from the other explanatory variables by a
+vertical bar `|`: `felm(dependentVar ~ independentVar1 +...+ independentVarN | categoricVar1 +...+categoricVar2 )`
+
+In a regression we can analyse the influence of a categorical variable on the independent variable by including for every category but one a dummy variable.
+The intercepts of the dummy variables tell us then by how much the independent variable would be higher(or lower) if the
+category was changed from the category for which no dummy variable was included to a category for which a dummy variable 
+was included(while all other variables are held the same). (Wooldridge 2013, p. 228)
+#< info "What is a dummy variable?"
+A dummy variable is used to differentiate between two categories. The two categories are encoded with 1 and 0.
+Gender for example can be stored in a dummy variable. Typically the name of the dummy variable is chosen
+to be one of the two categories. The category that is chosen as name of the dummy variable will be encoded with 1
+and the other category with 0. To make a dummy variable for gender you would name the variable `female` (`male`)
+and encode `female` (`male`) as 1 and `male` (`female`) as 0.
+The category that is encoded with 0 is called the base group.
+The slope parameter of a dummy variable in a regression tells us how much higher or lower the dependent variable
+is on average for the other group compared to the base group given that all other variables are fixed.
+
+(Wooldridge 2013, p. 217 ff.)
+#>
+
+
+If two variables are connected by a colon, like `as.factor(month):as.factor(zip5)` in the upcoming regression, this
+means we are going to include a dummy variable for every value combination of $month$ and $zip5$ but one.
+
+To display our following regression results in nicely formatted tables we are going to use the function `stargazer` from the package stargazer.
+We pass the regression results that we store in `felm1` as first argument to `stargazer` then specify the output type of the table and the digits to be displayed after the decimal point.
+
+Click check.
+```{r "5_1",results='asis'}
+#< task 
+#We assign a downsampled version of our original dataset to res
+#as these regressions would take too long otherwise
+res = readRDS("Resdntal.rds")
+library(lfe)
+felm1=felm(ln_cons_per_day~abp+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                     as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code),
+                   exactDOF = TRUE,data=res)
+library(stargazer)
+stargazer(felm1,type="html",digits=8)
+#>
+```
+<br>
+In the table you can see the estimate for the slope of $abp$. As our independent variable is logarithmized we
+can interpret the result in the following way: All other variables left unchanged, a change from not being enrolled
+in automatic bill payment to being enrolled will on average raise daily consumption in a month by about 2.8 percent. The estimate is significant at the 5 percent level.
+According to the author of the study the insalience to electricity bills induced by automatic bill payment
+is to blame for this consumption increase.
+
+The slope coefficient for the variable $abp\_X\_bb\_ever$ tells us the effect of enrollment in abp in accounts
+that ever enroll in budget billing. It is positive in our sampled data, but would actually be negative if
+we ran the regression on the whole dataset. Accounts that ever enroll in budget billing tend according to the
+author to be low income accounts. As low income households are forced to watch their finances more closely
+the enrollment in abp does apparently not increase insalience to electricity bills.
+
+
+
+
+In the next regression everything stays the same but that we tell felm to calculate cluster robust
+standard errors whereby we cluster by the area codes in $zip5$.
+
+Clustered standard errors are standard errors that are robust to any kind of serial correlation(Wooldridge 2013, p.839).
+
+We can tell `felm` to cluster by a certain variable if we change the regression formula argument.
+To add clustering by a certain variable in `felm` the formula is expanded in the following way:<br>
+`felm(dependentVar ~ independentVar1 +...+ independentVarN | categoricVar1 +...+categoricVar2 | 0 | ClusterVar)`<br>
+The third part is a specification that we won't need. We therefore specify it as 0.
+
+By passing to `stargazer` the previous regression results(in `felm1`) *and* the results we are going to obtain from the next regression that we store in `felm2`, a table is displayed with a column for each of the regressions. The columns are in the order of the regression results that we passed to `stargazer`.
+
+Click check.
+```{r "5_2",results='asis'}
+#< task 
+
+felm2=felm(ln_cons_per_day~abp+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                  as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code) | 0 | zip5,
+                exactDOF = TRUE,data=res)
+stargazer(felm1,felm2,type="html",digits=8)
+#>
+```
+Clustering won't change the estimates for the intercepts but our clustered standard errors
+differ from the normal standard errors. They are bigger to an extent that our estimates are not
+significant anymore.
+
+
+## Exercise 6 -- Recent Residential Accounts
+
+In this exercise we are going to run the same regressions as in the previous exercise 
+but on a subset of the dataset that we used there. Here we only look  at observations
+of accounts that were initiated in the year 2000 or later. These observations
+are in the file `rsd_recent.rds`.
+
+Click check.
+```{r "6_1",results='asis'}
+#< task 
+res_recent = readRDS("rsd_recent.rds")
+
+rec_felm1=felm(ln_cons_per_day~abp+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                     as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code),
+                   exactDOF = TRUE,data=res_recent)
+stargazer(rec_felm1,type="html",digits=8)
+#>
+```
+The estimate for the effect of $abp$ increased strongly to about 8.8% which is significant at the 1% level.
+The effect of enrollment in abp is apparently much stronger for accounts that were initiated later.
+As, according to the author, account holders with later account initiation dates tend to be younger, insalience
+to electricity bills seems to rise most in young account holders during enrollment in $abp$.
+This means on the other hand that older account holders are less prone to decreased salience to their
+electricity bills because of enrollment in $abp$. Apparently older account holders, unlike their younger counterparts, are more likely to continue viewing their electricity bills even when they are paid automatically.
+
+```{r "6_2",results='asis'}
+#< task 
+
+rec_felm2=felm(ln_cons_per_day~abp+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                  as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code) | 0 | zip5,
+                exactDOF = TRUE,data=res_recent)
+stargazer(rec_felm1,rec_felm2,type="html",digits=8)
+#>
+```
+
+## Exercise 7 -- Residential Energy Smart Accounts
+
+In this exercise we will only look at data of residential consumers who are in the rate class for new and
+retrofitted energy-efficient homes.
+
+Click check.
+```{r "7_1_1",results='asis'}
+#< task 
+res_en_sm = readRDS("ResEnSm.rds")
+
+felm1=felm(ln_cons_per_day~abp+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                     as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code),
+                   exactDOF = TRUE,data=res_en_sm)
+stargazer(felm1,type="html",digits=8)
+#>
+```
+Compared to *all* residential accounts the effect of enrollment in abp on electricity consumption seems to be stronger for accounts with new and retrofitted energy-efficient homes compared to all residential customers. According to the author this may be attributed to the so called rebound effect: Here it means that 
+account holders in energy efficient houses probably tend not to worry about overconsumption ,i.e. because of insalience to bills because of enrollment in abp, because they think their overconsumption will probably be offset
+by their savings from their energy efficient homes.
+
+```{r "7_1_2",results='asis'}
+#< task 
+
+felm2=felm(ln_cons_per_day~abp+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                  as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code) | 0 | zip5,
+                exactDOF = TRUE,data=res_en_sm)
+stargazer(felm1,felm2,type="html",digits=8)
+#>
+```
+----------------------------------
+
+### Recent Energy Smart Accounts
+```{r "7_2_1",results='asis'}
+#< task 
+res_en_sm_rec = readRDS("res_en_sm_rec.rds")
+
+rec_felm1=felm(ln_cons_per_day~abp+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                  as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code) | 0 | zip5,
+                exactDOF = TRUE,data=res_en_sm_rec)
+
+stargazer(rec_felm1,type="html",digits=8)
+#>
+```
+The analysis of energy-smart homes which were initiated 2000 or later again shows a stronger effect of
+enrollment in abp among accounts with later initiation date.
+```{r "7_2_2",results='asis'}
+#< task 
+
+rec_felm2=felm(ln_cons_per_day~abp+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                  as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code) | 0 | zip5,
+                exactDOF = TRUE,data=res_en_sm_rec)
+
+stargazer(rec_felm1,rec_felm2,type="html",digits=8)
+#>
+```
+
+## Exercise 8 -- Residential Standard Accounts
+
+In this exercise we only look at data of residential consumers who are in the *standard rate class*.
+
+```{r "8_1",results='asis'}
+#< task 
+res_std = readRDS("ResStd.rds")
+
+felm1=felm(ln_cons_per_day~abp+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                     as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code),
+                   exactDOF = TRUE,data=res_std)
+
+stargazer(felm1,type="html",digits=8)
+#>
+```
+
+```{r "8_2",results='asis'}
+#< task 
+
+felm2=felm(ln_cons_per_day~abp+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                  as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code) | 0 | zip5,
+                exactDOF = TRUE,data=res_std)
+
+stargazer(felm1,felm2,type="html",digits=8)
+#>
+```
+----------------------------------
+
+### Recent Standard Accounts
+
+```{r "8_3",results='asis'}
+#< task 
+res_std_rec = readRDS("res_std_rec.rds")
+
+rec_felm1=felm(ln_cons_per_day~abp+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                  as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code) | 0 | zip5,
+                exactDOF = TRUE,data=res_std_rec)
+
+stargazer(rec_felm1,type="html",digits=8)
+#>
+```
+The effect of enrollment in abp on electricity consumption increases for *standard* accounts initiated 2000 and later as well compared to accounts with earlier initiation dates.
+
+```{r "8_2_2",results='asis'}
+#< task 
+
+rec_felm2=felm(ln_cons_per_day~abp+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                  as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code) | 0 | zip5,
+                exactDOF = TRUE,data=res_std_rec)
+
+stargazer(rec_felm1,rec_felm2,type="html",digits=8)
+#>
+```
+
+## Exercise 9 -- Residential Summer Conserving Accounts
+
+In the regression of this exercise  we deal only with data of residential consumers who are in the summer conserving rate
+class. Consumers in this rate class have a discounted rate but in exchange for that they undertake to consume
+maximally as much as a value that is determined relative to own winter consumption.
+
+```{r "9_1_1",results='asis'}
+#< task 
+res_summ_cons = readRDS("ResSummerCons.rds")
+
+felm1=felm(ln_cons_per_day~abp+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                     as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code),
+                   exactDOF = TRUE,data=res_summ_cons)
+
+stargazer(felm1,type="html",digits=8)
+#>
+```
+
+The coefficient for abp is very small compared to the values in the previous regressions. This is plausible because if the accounts in this rate class commit to stay under a certain value in their consumption they
+likely monitor their own consumption attentively whether they are enrolled in abp or not. These accounts
+are especially aware of their own consumption regardless of enrollment in abp.
+
+```{r "9_1_2",results='asis'}
+#< task 
+ 
+felm2=felm(ln_cons_per_day~abp+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                  as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code) | 0 | zip5,
+                exactDOF = TRUE,data=res_summ_cons)
+
+stargazer(felm1,felm2,type="html",digits=8)
+#>
+```
+
+----------------------------------
+
+### Recent Summer Conserving Accounts
+
+```{r "9_2_1",results='asis'}
+#< task 
+res_summcon_rec = readRDS("res_summ_cons_rec.rds")
+ 
+rec_felm1=felm(ln_cons_per_day~abp+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                  as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code),
+                exactDOF = TRUE,data=res_summcon_rec)
+
+stargazer(rec_felm1,type="html",digits=8)
+#>
+```
+Just like the other major rate classes and all residential accounts in general, for summer conserving accounts
+the effect of abp on electricity consumption is stronger for accounts initiated 2000 or later.
+```{r "9_2_2",results='asis'}
+#< task  
+
+rec_felm2=felm(ln_cons_per_day~abp+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                  as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code) | 0 | zip5,
+                exactDOF = TRUE,data=res_summcon_rec)
+
+stargazer(rec_felm1,rec_felm2,type="html",digits=8)
+#>
+```
+
+## Exercise 10 -- Pseudo Treatments
+
+In this exercise we are dealing with data of *all* residential accounts again but this time we
+replace $abp$ by variables $pseudo\_abp\_13,pseudo\_abp\_16,pseudo\_abp\_19,pseudo\_abp\_22,pseudo\_abp\_25$ and 
+run a regression for every replacement option. The pseudo abp variables do have the value that the variable $abp$ has 13,16,19,22 or 25 months later.
+Pseudo enrollment in abp should not have any effect on electricity consumption. The following regressions'
+coefficients for the pseudo abp variables are in fact close to zero and not significant.
+<br>
+In this exercise we use a new variable:
+
+ * $abp\_centered\_date$: This variable contains the number of months that have passed since the household
+first enrolled in automatic bill payment. It can be negative and positive. If for example a household
+is in the automatic bill payment program for the first time in year_month 470, then this variable will be 0.
+For year_month 469 it would be -1 and for year_month 471 it would be 1 and so on.
+This variable is NA for households that never enroll in automatic bill payment.
+
+As you see in the filter condition in the following code, we want only observations where $abp\_centered\_date$ is smaller or equal to -1. In other words, we want only observations up to one month before the first time of enrollment.
+If we included observations after first enrollment we wouldn't have a pure pseudo-treatment anymore.
+
+
+```{r "10_1_1",results='asis'}
+#< task 
+res = readRDS("Resdntal.rds")
+
+felm1=felm(ln_cons_per_day~pseudo_abp_13+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                  as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code) | 0 | zip5,
+                exactDOF = TRUE,data=filter(res,abp_centered_date <= -1 | is.na(abp_centered_date)))
+
+stargazer(felm1,type="html",digits=8)
+#>
+```
+<br>
+
+```{r "10_1_2",results='asis'}
+#< task 
+
+felm2=felm(ln_cons_per_day~pseudo_abp_16+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                  as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code) | 0 | zip5,
+                exactDOF = TRUE,data=filter(res,abp_centered_date <= -1 | is.na(abp_centered_date)))
+
+stargazer(felm2,type="html",digits=8)
+#>
+```
+<br>
+```{r "10_1_3",results='asis'}
+#< task 
+
+felm3=felm(ln_cons_per_day~pseudo_abp_19+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                  as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code) | 0 | zip5,
+                exactDOF = TRUE,data=filter(res,abp_centered_date <= -1 | is.na(abp_centered_date)))
+
+stargazer(felm3,type="html",digits=8)
+#>
+```
+<br>
+```{r "10_1_4",results='asis'}
+#< task 
+
+felm4=felm(ln_cons_per_day~pseudo_abp_22+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                  as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code) | 0 | zip5,
+                exactDOF = TRUE,data=filter(res,abp_centered_date <= -1 | is.na(abp_centered_date)))
+
+stargazer(felm4,type="html",digits=8)
+#>
+```
+<br>
+
+```{r "10_1_5",results='asis'}
+#< task 
+ 
+felm5=felm(ln_cons_per_day~pseudo_abp_25+bb+abp_X_bb_ever+bb_X_abp_ever+
+                  acct_seq+acct_seq_X_abp_ever+acct_seq2+acct_seq3 | 
+                  as.factor(year_month) + as.factor(month) + 
+                  as.factor(month):as.factor(zip5) + as.factor(zip5)+
+                  as.factor(id_rate_code) | 0 | zip5,
+                exactDOF = TRUE,data=filter(res,abp_centered_date <= -1 | is.na(abp_centered_date)))
+
+stargazer(felm5,type="html",digits=8)
+#>
+```
+
+## Exercise 11 -- Conclusion
+
+### Summary
+
+Now that we have run our analysis let's come back to our initial question whether enrollment in abp affects electricity consumption.<br>
+Our regressions on the downsampled data set of residential customers showed the following relationships:<br> 
+All other variables held equal the change from not being enrolled in abp to being enrolled in abp causes on average an increase of daily electricity consumption(kWh) in any month by 2.82 % compared to an increase of 3.89 % obtained if the regression is run on the whole data set. The estimates are significant at the 1% level. Our estimate for the downsampled data set loses its significance however when standard errors are clustered by the zip code that accounts operate in. <br>
+Further analysis on the relationship of abp on ln_cons_per_day on subgroups of residential customers identified by rate-classes, show that accounts in the rate class with the highest incentive to monitor consumption (summer conserving rate class) show the least susceptibility to overconsumption induced by abp. <br>
+The argument that abp affects electricity consumption by reducing price salience and therefore lowering perceived electricity prices, is supported by the fact, that the intercept for the variable $abp\_X\_abp\_ever$, which measures the effect of abp on electricity consumption among households that are presumably low-income households, is not positive. Therefore account groups with a higher incentive to view their bills, be it because of low income or obligation from contracts, are less affected by abp induced overconsumption. <br>
+On top of that, analysis with pseudo treatments for the variable $abp$ showed that our inference method does not show a relationship between enrollment in abp and electricity consumption for data that was artificially created so that there should be no relationship between the two variables. This backs up the view that the model is not prone to easily show a relationship when there obviously is none. <br>
+ It also became apparent that across the data sets of accounts in the different rate classes for accounts initiated in the year 2000 or later, the partial effect of abp on ln_cons_per_day is always higher, compared to accounts irrespective of origination date, in the same data set. Holders of accounts with earlier initiation date, who also tend to be older, seem to view their electricity bills more than their counterparts with account initiation date 2000 or later.  <br>
+Interesting to note is that the increase of electricity consumption because of enrollment in budget billing affects all account groups. Accounts that have more incentives to view their bills, namely accounts in the summer conserving rate class, are not less likely to overconsume when it comes to enrollment in budget billing. <br>
+As stated by the author, the explanation for this is that overconsumption in the form of upwards deviation from the own average of the last 12 months is, even when bills are viewed, less likely to be perceived as overconsumption since payment is smoothed. Customers won't have to pay the full price immediately after a month of heightened consumption above the mean of the last 12 months. <br>
+This also explains that the partial effect of for budget billing on ln_cons_per_day is in general not higher for "Recent" accounts compared to accounts irrespective of origination date. 
+<br>
+
+
+### Discussion
+
+A problem with our regression model is that we might have some hidden endogeneity in form of omitted variable bias. The bias might stem from the
+unobserved income of account holders. Imagine the case of an account holder on a tight budget who thinks enrollment in abp might cause him to overconsume and
+therefore avoids enrolling in it. If the same account holder now has an income raise, he may care less about his electricity bills and anything which might cause him to have a higher electricity consumption. As he doesn't want to miss the convenience of automatic bill payment he enrolls in abp and at the same time his 
+monthly electricity consumption increases, but not or only marginally because of enrollment in abp but mainly because of his higher income.
+As income probably is a relevant variable when it comes to explaining electricity consumption and because income might be correlated with $abp$ like in the imaginary example here and is unobserved and therefore part of the error term, we may have an endogeneity problem here that would cause the estimate of the partial effect of
+$abp$ on $ln\_cons\_per\_day$ to be upwards biased.<br>
+As income is *not* always constant for a given account individual fixed effects wouldn't eliminate the bias from the income variable.
+<br>
+<br>
+According to the author however, even if income changes *do* affect electricity consumption and abp enrollment, it is not clear that an income increase would
+*raise* the probability to enroll in abp. He says the opposite may very well be the case too, in which case the estimate of the partial effect of $abp$ on
+$ln\_cons\_per\_day$ would even be biased downwards. 
+<br>
+Even if there is an upward bias because of an omitted income variable, the question whether $abp$ has a partial effect on $ln\_cons\_per\_day$ *at all* can probably
+be positively answered. The fact that the same analysis was done on separate subgroups and that the positive partial effect of $abp$ on $ln\_cons\_per\_day$ was 
+practically not existent for the subgroups of accounts that probably reviewed their bills regularly (budget billing accounts and accounts in the summer conserving rate class) gives credence to the theory of the author of how abp affects the accounts that are enrolled in it: Account holders that are enrolled in abp do not have to 
+view their bills as they are paid without their action. The cost of ignoring the bills therefore falls and account holders are less likely to view their bills. Because
+of that the salience of the price for electricity and therefore the awareness of it decrease. This in turn causes account holders to subjectively perceive the price of electricity to be lower and therefore demand more of it.
+<br>
+<br>
+Regarding the quality of the data, it can be criticized that, as shown under "Inconsistencies in the data set" in the Appendix of the problem set, 68.78% of observations have a year_month that has two or three months associated with it. The question arises to which extent and in which way this inconsistency influenced
+the results from the analysis.
+
+
+
+## Exercise 12 -- Reference
+
+### Papers
+
+* 'Automatic Bill Payment and Salience Effects: Evidence from Electricity Consumption'
+by Steven Sexton(first published May 2015 in Review of Economics and Statistics, Volume 97, Issue 2,
+Page 229-241)
+
+
+### R and R Packages
+
+* 'dplyr': Hadley Wickham and Romain Francois (2016). dplyr: A Grammar of Data Manipulation. R package version 0.5.0.
+  https://CRAN.R-project.org/package=dplyr
+* 'ggplot2': H. Wickham. ggplot2: Elegant Graphics for Data Analysis. Springer-Verlag New York, 2009.
+* 'lfe': S. Gaure. lfe: Linear group fixed effects. R package version 2.5-1998, 2016
+* R Core Team (2017). R: A language and environment for statistical computing. R Foundation for Statistical
+  Computing, Vienna, Austria. URL https://www.R-project.org/.
+* 'RTutor': Sebastian Kranz (2015). RTutor: R problem sets with automatic test of solution and hints. R package version
+  2015.12.16.
+* 'stargazer': Hlavac, Marek (2015). stargazer: Well-Formatted Regression and Summary Statistics Tables. R package version
+  5.2. http://CRAN.R-project.org/package=stargazer
+* 'yaml' Jeremy Stephens (2016). yaml: Methods to Convert R Data to YAML and Back. R package version 2.1.14.
+  https://CRAN.R-project.org/package=yaml
+  
+### Websites
+ * http://www.stata.com/manuals13/xtxtreg.pdf ,27.08.2017
+ * http://www.stata.com/help.cgi?xi ,27.08.2017
+ * https://www.santeecooper.com/residential/my-service/pay-my-bill.aspx ,13.08.2017
+ * https://www.fpl.com/account/bill/budget-billing.html ,13.08.2017
+ * http://ggplot2.tidyverse.org/reference/ ,27.08.2017
+ * https://cran.r-project.org/web/packages/dplyr/vignettes/dplyr.html ,27.08.2017
+ * http://www.umweltbundesamt.de/en/topics/waste-resources/economic-legal-dimensions-of-resource-conservation/rebound-effects ,27.08.2017
+
+
+### Books
+
+* Wickham, H. (2009). ggplot2: Elegant Graphics for Data Analysis. New York, NY: Springer.
+* Wooldridge, J.M. (2013): Introductory Econometrics: A Modern Approach. 5th International Edition, South-Western
+* Wooldridge, J.M. (2002): Econometric Analysis of Cross Section and Panel Data, Cambridge, Mass, MIT Press
+
+
+
+
+## Exercise 13 -- Appendix
+
+
+### 1. Code used to sample the data for the regressions
+
+If the variable `rsd` contains the data set of all residential accounts:
+
+        un=unique(rsd$id_rate_code)
+        smpl=sample(un,size=length(un)*(1/45)) # 1/45 was used for the sampling of all data sets
+        smpldf=rsd[rsd$id_rate_code %in% smpl,]
+        saveRDS(smpldf,file="Resdntal.rds")
+
+The "Recent" data sets were created from the already sampled data sets.
+<br>
+<br>
+### 2. About "Recent" accounts
+
+The author gives conflicting information when defining "Recent" accounts. They are defined as accounts that were
+initiated in the year 2000 or later *but also* as only the accounts that were initiated after the year 2000.
+
+The "Recent" data sets for this problem set were created with the assumption that "Recent" accounts are 
+accounts initiated in the year 2000 or later.
+<br>
+<br>
+### 3. Inconsistencies in the data set
+
+In the data set any different value in $year\_month$ should be linked to a single month of the year.
+This is however not always the case:
+
+If the variable `rsd` contains the data set of all residential accounts then
+
+for example the code `unique(rsd$month[rsd$year_month=="584"])` returns `9 8`. 
+
+The following code shows the extent of the problem:
+
+        # For every different year_month look how many months there are and store the counts in
+        # the vector le. The sapply function passes every element of the vector in its
+        # first argument one after the other to the function specified in the second argument.
+        # The result is stored for every element. The results are returned in a vector in our case.
+        le=sapply(unique(rsd$year_month),function(x) length(unique(rsd$month[rsd$year_month==x])))
+        
+        # calculate the percentage of observations that have a year_month that has more than one
+        # month associated with it
+        (sum(rsd$year_month %in% unique(rsd$year_month)[le>1])/nrow(rsd))*100 # 68.78201%
+        
+        # These observations consist of observations where year_month has 2 or 3 months
+        # associated with it:
+        
+        # calculate the percentage of observations that have a year_month that has 
+        # exactly 2 months associated with it
+        (sum(rsd$year_month %in% unique(rsd$year_month)[le==2])/nrow(rsd))*100 # 46.21009%
+        
+        # calculate the percentage of observations that have a year_month that has
+        # exactly 3 months associated with it
+        (sum(rsd$year_month %in% unique(rsd$year_month)[le==31])/nrow(rsd))*100 # 22.57192%
+
+<br>
+<br>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

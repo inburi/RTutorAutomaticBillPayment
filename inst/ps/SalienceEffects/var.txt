@@ -1,0 +1,16 @@
+orgvar | var | descr
+year_month | year_month | months that have passed since 01 January 1960; for example February 1960 would be denoted by 1
+abp | abp | Dummy variable ; 1 if the account is enrolled in automatic bill payment at the time of the observation
+abp_X_bb_ever | abp_X_bb_ever | Dummy variable ; 1 if the account is enrolled in a automatic bill payment at the time of the observation and has ever been enrolled in budget billing
+abp_centered_date | abp_centered_date | variable year_month minus the year_month in which the account first enrolled in automatic bill payment, if that account has ever been enrolled in automatic bill payment; NA otherwise
+acct_seq | acct_seq | months that have passed since account initiation 
+acct_seq2 | acct_seq2 | the square of acct_seq
+acct_seq3 | acct_seq3 | the cubic of acct_seq
+acct_seq_X_abp_ever | acct_seq_X_abp_ever | equals the variable acct_seq if the account has ever been enrolled in automatic bill payment and is 0 otherwise
+bb | bb | Dummy variable ; 1 if the account is enrolled in budget billing at the time of the observation
+bb_X_abp_ever | bb_X_abp_ever | Dummy variable ; 1 if the account is enrolled in budget billing at the time of the observation and has ever been enrolled in automatic bill payment
+id_rate_code | id_rate_code | uniquely identifies an account
+ln_cons_per_day | ln_cons_per_day | natural logarithm of average daily electricity consumption in kWh of a certain account for a given year_month 
+month | month | Calendar month denoted by numbers 1 to 12 (1 = January, 2 = February,...)
+year | year | year of observation
+zip5 | zip5 | 5 digit zip code to identify area in which account operates in

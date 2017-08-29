@@ -1,0 +1,10 @@
+Package: RTutorAutomaticBillPayment
+Type: Package
+Title: The Effect of Automatic Bill Payment on Electricity Consumption
+Version: 0.1
+Date: 2017-29-08
+Author: Ingmar Buri
+Maintainer: Ingmar Buri <ingmar.buri@googlemail.com>
+Description: RTutor problem set to explore the study: "Automatic Bill Payment and Salience Effects: Evidence from Electricity Consumption" by Steven Sexton (May 2015)
+License: GPL-2
+Depends: RTutor, dplyr, ggplot2, stargazer, lfe, yaml
